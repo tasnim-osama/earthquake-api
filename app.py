@@ -1,44 +1,38 @@
-from flask import Flask, request, jsonify
-import pandas as pd
+from flask import Flask, request, jsonify, Response
 import joblib
+import os
 
 app = Flask(__name__)
 
-# تحميل النموذج
-model = joblib.load("earthquake_model.pkl")
-
 @app.route('/')
 def home():
-    return "🚨 Earthquake Prediction API is running!"
+    if os.path.exists("README.md"):
+        with open("README.md", encoding="utf-8") as f:
+            content = f.read()
+        return Response(content, mimetype="text/plain")
+    return "README.md not found", 404
 
 @app.route('/predict', methods=['POST'])
 def predict():
+    if not os.path.exists("earthquake_model.pkl"):
+        return jsonify({"error": "Model file not found."}), 500
+
+    model = joblib.load("earthquake_model.pkl")
+
     data = request.get_json()
+    latitude = data.get("latitude")
+    longitude = data.get("longitude")
+    depth = data.get("depth")
 
-    # التأكد من وجود الحقول المطلوبة
-    required = ['latitude', 'longitude', 'depth']
-    if not all(field in data for field in required):
-        return jsonify({'error': 'Missing data. Required: latitude, longitude, depth'}), 400
+    prediction = model.predict([[latitude, longitude, depth]])[0]
+    probability = model.predict_proba([[latitude, longitude, depth]])[0][prediction]
 
-    # تحويل البيانات إلى DataFrame
-    sample = pd.DataFrame([{
-        'latitude': data['latitude'],
-        'longitude': data['longitude'],
-        'depth': data['depth']
-    }])
-
-    # التنبؤ
-    prediction = model.predict(sample)[0]
-    proba = model.predict_proba(sample)[0][1]
-
-    # إعداد النتيجة
-    result = {
-        'prediction': int(prediction),
-        'probability': round(proba, 4),
-        'message': "⚠️ من المتوقع حدوث زلزال!" if prediction == 1 else "✅ لا يُتوقع حدوث زلزال."
-    }
-
-    return jsonify(result)
+    message = "✅ لا يُتوقع حدوث زلزال." if prediction == 0 else "⚠️ يُحتمل حدوث زلزال."
+    return jsonify({
+        "prediction": int(prediction),
+        "probability": round(float(probability), 2),
+        "message": message
+    })
 
 if __name__ == '__main__':
     app.run(debug=True)
