@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Earthquake Predictions (Real-Time)</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #ccc;
+            text-align: center;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+        .yes {
+            color: red;
+            font-weight: bold;
+        }
+        .no {
+            color: green;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>🌍 Real-Time Earthquake Predictions in Jordan</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Location</th>
+                <th>Magnitude</th>
+                <th>Depth (km)</th>
+                <th>Latitude</th>
+                <th>Longitude</th>
+                <th>Prediction</th>
+                <th>Probability</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for quake in predictions %}
+            <tr>
+                <td>{{ quake.place }}</td>
+                <td>{{ quake.mag }}</td>
+                <td>{{ quake.depth }}</td>
+                <td>{{ quake.latitude }}</td>
+                <td>{{ quake.longitude }}</td>
+                <td class="{{ 'yes' if quake.prediction == 1 else 'no' }}">
+                    {{ 'Likely' if quake.prediction == 1 else 'Unlikely' }}
+                </td>
+                <td>{{ quake.probability }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
