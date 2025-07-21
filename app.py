@@ -36,3 +36,51 @@ def predict():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+import requests
+from flask import render_template  # إذا لم يكن موجودًا
+
+@app.route('/realtime')
+def realtime_prediction():
+    # جلب بيانات الزلازل الأخيرة من USGS
+    url = "https://earthquake.usgs.gov/fdsnws/event/1/query"
+    params = {
+        "format": "geojson",
+        "starttime": "2024-07-01",
+        "endtime": "2025-07-21",
+        "minlatitude": 29.0,
+        "maxlatitude": 33.5,
+        "minlongitude": 34.0,
+        "maxlongitude": 39.0,
+        "minmagnitude": 2.5
+    }
+
+    response = requests.get(url, params=params)
+    data = response.json()
+
+    model = joblib.load("earthquake_model.pkl")
+    predictions = []
+
+    for quake in data["features"]:
+        props = quake["properties"]
+        coords = quake["geometry"]["coordinates"]
+
+        longitude = coords[0]
+        latitude = coords[1]
+        depth = coords[2]
+
+        prediction = model.predict([[latitude, longitude, depth]])[0]
+        probability = model.predict_proba([[latitude, longitude, depth]])[0][prediction]
+
+        predictions.append({
+            "place": props["place"],
+            "mag": props["mag"],
+            "time": props["time"],
+            "latitude": latitude,
+            "longitude": longitude,
+            "depth": depth,
+            "prediction": int(prediction),
+            "probability": round(float(probability), 2),
+        })
+
+    return render_template("realtime.html", predictions=predictions)
