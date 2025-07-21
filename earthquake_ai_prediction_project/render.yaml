@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: earthquake-api
+    env: python
+    plan: free
+    buildCommand: "python prepare_data.py && python train_model.py"
+    startCommand: "python app.py"
