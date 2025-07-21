@@ -29,7 +29,7 @@
 ├── jordan_earthquakes_2015_2025.csv ← بيانات خام
 └── README.md
 
-yaml
-Copy
-Edit
 
+👩‍💻 المطورة
+Tasnim Osama
+🔗 GitHub: @tasnim-osama
