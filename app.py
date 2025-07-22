@@ -32,13 +32,25 @@ def get_earthquakes():
 
         earthquakes = []
         for feature in data['features']:
-            properties = feature['properties']
-            geometry = feature['geometry']
+            props = feature['properties']
+            coords = feature['geometry']['coordinates']
+            longitude, latitude, depth = coords
+
+            # Prepare model input
+            features = pd.DataFrame([{
+                'latitude': latitude,
+                'longitude': longitude,
+                'depth': depth
+            }])
+
+            prediction = model.predict(features)[0]
+
             earthquake = {
-                'place': properties['place'],
-                'magnitude': properties['mag'],
-                'time': properties['time'],
-                'coordinates': geometry['coordinates']
+                'place': props['place'],
+                'magnitude': props['mag'],
+                'time': props['time'],
+                'coordinates': coords,
+                'prediction': int(prediction)
             }
             earthquakes.append(earthquake)
 
