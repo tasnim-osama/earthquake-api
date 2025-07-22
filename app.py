@@ -1,9 +1,12 @@
 from flask import Flask, request, jsonify, render_template
 import joblib
+import pandas as pd
 import requests
 import os
 
 app = Flask(__name__)
+
+# Load the trained model
 model = joblib.load("earthquake_model.pkl")
 
 @app.route('/')
@@ -14,14 +17,34 @@ def home():
 def predict():
     try:
         data = request.get_json()
-        latitude = float(data['latitude'])
-        longitude = float(data['longitude'])
-        depth = float(data['depth'])
-
-        prediction = model.predict([[latitude, longitude, depth]])
-        return jsonify({'prediction': round(prediction[0], 2)})
+        features = pd.DataFrame([data])
+        prediction = model.predict(features)
+        return jsonify({'prediction': prediction[0]})
     except Exception as e:
-        return jsonify({'error': str(e)}), 400
+        return jsonify({'error': str(e)})
+
+@app.route('/api/earthquakes')
+def get_earthquakes():
+    try:
+        url = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_hour.geojson"
+        response = requests.get(url)
+        data = response.json()
+
+        earthquakes = []
+        for feature in data['features']:
+            properties = feature['properties']
+            geometry = feature['geometry']
+            earthquake = {
+                'place': properties['place'],
+                'magnitude': properties['mag'],
+                'time': properties['time'],
+                'coordinates': geometry['coordinates']
+            }
+            earthquakes.append(earthquake)
+
+        return jsonify(earthquakes)
+    except Exception as e:
+        return jsonify({'error': str(e)})
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
