@@ -1,83 +1,49 @@
-from flask import Flask, request, jsonify, Response, render_template
+from flask import Flask, request, jsonify, render_template
 import joblib
+import pandas as pd
 import requests
-import os
 
 app = Flask(__name__)
 
+# Load the trained model
+model = joblib.load("earthquake_model.pkl")
+
 @app.route('/')
 def home():
-    if os.path.exists("README.md"):
-        with open("README.md", encoding="utf-8") as f:
-            content = f.read()
-        return Response(content, mimetype="text/plain")
-    return "README.md not found", 404
+    return render_template('realtime.html')
 
 @app.route('/predict', methods=['POST'])
 def predict():
-    if not os.path.exists("earthquake_model.pkl"):
-        return jsonify({"error": "Model file not found."}), 500
+    try:
+        data = request.get_json()
+        features = pd.DataFrame([data])
+        prediction = model.predict(features)
+        return jsonify({'prediction': prediction[0]})
+    except Exception as e:
+        return jsonify({'error': str(e)})
 
-    model = joblib.load("earthquake_model.pkl")
-    data = request.get_json()
-    latitude = data.get("latitude")
-    longitude = data.get("longitude")
-    depth = data.get("depth")
+@app.route('/api/earthquakes')
+def get_earthquakes():
+    try:
+        url = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_hour.geojson"
+        response = requests.get(url)
+        data = response.json()
 
-    prediction = model.predict([[latitude, longitude, depth]])[0]
-    probability = model.predict_proba([[latitude, longitude, depth]])[0][prediction]
+        earthquakes = []
+        for feature in data['features']:
+            properties = feature['properties']
+            geometry = feature['geometry']
+            earthquake = {
+                'place': properties['place'],
+                'magnitude': properties['mag'],
+                'time': properties['time'],
+                'coordinates': geometry['coordinates']
+            }
+            earthquakes.append(earthquake)
 
-    message = "✅ No earthquake expected." if prediction == 0 else "⚠️ Earthquake likely."
-    return jsonify({
-        "prediction": int(prediction),
-        "probability": round(float(probability), 2),
-        "message": message
-    })
-
-@app.route('/realtime')
-def realtime_prediction():
-    url = "https://earthquake.usgs.gov/fdsnws/event/1/query"
-    params = {
-        "format": "geojson",
-        "starttime": "2024-07-01",
-        "endtime": "2025-07-21",
-        "minlatitude": 29.0,
-        "maxlatitude": 33.5,
-        "minlongitude": 34.0,
-        "maxlongitude": 39.0,
-        "minmagnitude": 2.5
-    }
-
-    response = requests.get(url, params=params)
-    data = response.json()
-
-    model = joblib.load("earthquake_model.pkl")
-    predictions = []
-
-    for quake in data["features"]:
-        props = quake["properties"]
-        coords = quake["geometry"]["coordinates"]
-
-        longitude = coords[0]
-        latitude = coords[1]
-        depth = coords[2]
-
-        prediction = model.predict([[latitude, longitude, depth]])[0]
-        probability = model.predict_proba([[latitude, longitude, depth]])[0][prediction]
-
-        predictions.append({
-            "place": props["place"],
-            "mag": props["mag"],
-            "time": props["time"],
-            "latitude": latitude,
-            "longitude": longitude,
-            "depth": depth,
-            "prediction": int(prediction),
-            "probability": round(float(probability), 2),
-        })
-
-    return render_template("realtime.html", predictions=predictions)
+        return jsonify(earthquakes)
+    except Exception as e:
+        return jsonify({'error': str(e)})
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))  # دعم منصة Render
-    app.run(host="0.0.0.0", port=port)
+    app.run(debug=True)
