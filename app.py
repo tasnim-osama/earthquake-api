@@ -1,5 +1,6 @@
-from flask import Flask, request, jsonify, Response
+from flask import Flask, request, jsonify, Response, render_template
 import joblib
+import requests
 import os
 
 app = Flask(__name__)
@@ -18,7 +19,6 @@ def predict():
         return jsonify({"error": "Model file not found."}), 500
 
     model = joblib.load("earthquake_model.pkl")
-
     data = request.get_json()
     latitude = data.get("latitude")
     longitude = data.get("longitude")
@@ -27,22 +27,15 @@ def predict():
     prediction = model.predict([[latitude, longitude, depth]])[0]
     probability = model.predict_proba([[latitude, longitude, depth]])[0][prediction]
 
-    message = "✅ لا يُتوقع حدوث زلزال." if prediction == 0 else "⚠️ يُحتمل حدوث زلزال."
+    message = "✅ No earthquake expected." if prediction == 0 else "⚠️ Earthquake likely."
     return jsonify({
         "prediction": int(prediction),
         "probability": round(float(probability), 2),
         "message": message
     })
 
-if __name__ == '__main__':
-    app.run(debug=True)
-
-import requests
-from flask import render_template  # إذا لم يكن موجودًا
-
 @app.route('/realtime')
 def realtime_prediction():
-    # جلب بيانات الزلازل الأخيرة من USGS
     url = "https://earthquake.usgs.gov/fdsnws/event/1/query"
     params = {
         "format": "geojson",
@@ -84,3 +77,7 @@ def realtime_prediction():
         })
 
     return render_template("realtime.html", predictions=predictions)
+
+if __name__ == '__main__':
+    port = int(os.environ.get("PORT", 5000))  # دعم منصة Render
+    app.run(host="0.0.0.0", port=port)
