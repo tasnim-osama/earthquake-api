@@ -4,7 +4,7 @@ from sklearn.ensemble import RandomForestClassifier
 import joblib
 
 # تحميل البيانات
-df = pd.read_csv("earthquakes_1950_2025_combined.csv")
+df = pd.read_csv("earthquakes_prepared.csv")
 
 # الميزات والهدف
 X = df[['latitude', 'longitude', 'depth']]
