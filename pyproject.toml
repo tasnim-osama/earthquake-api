@@ -1,11 +1,11 @@
 [tool.poetry]
-name = "my-project"
+name = "earthquake-api"
 version = "0.1.0"
-description = ""
-authors = ["Your Name <you@example.com>"]
+description = "Earthquake prediction API using Flask and ML"
+authors = ["Tasneem Osama <you@example.com>"]
 
 [tool.poetry.dependencies]
-python = "^3.13"
+python = "^3.10"
 Flask = "*"
 pandas = "*"
 scikit-learn = "*"
@@ -13,3 +13,7 @@ joblib = "*"
 requests = "*"
 gunicorn = "*"
 geopy = "*"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
