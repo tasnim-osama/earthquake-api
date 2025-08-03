@@ -3,15 +3,11 @@ import joblib
 import pandas as pd
 import requests
 import os
-from geopy.geocoders import Nominatim  # إضافة مكتبة geopy
 
 app = Flask(__name__)
 
-# تحميل النموذج المدرب
+# Load the trained model
 model = joblib.load("earthquake_model.pkl")
-
-# تهيئة Geopy
-geolocator = Nominatim(user_agent="earthquake_prediction_app")
 
 @app.route('/')
 def home():
@@ -21,26 +17,11 @@ def home():
 def predict():
     try:
         data = request.get_json()
-        location_name = data.get('location')
-        if not location_name:
-            return jsonify({'error': 'Location name is required'}), 400
-
-        # تحويل اسم المنطقة إلى إحداثيات (latitude, longitude)
-        location = geolocator.geocode(location_name)
-        if not location:
-            return jsonify({'error': 'Could not find coordinates for the given location'}), 404
-
-        # إدخال النموذج (مع عمق افتراضي)
-        features = pd.DataFrame([{'latitude': location.latitude, 'longitude': location.longitude, 'depth': 10}])
+        features = pd.DataFrame([data])
         prediction = model.predict(features)
-        
-        return jsonify({
-            'location_name': location_name,
-            'prediction': int(prediction[0]),
-            'coordinates': [location.longitude, location.latitude]
-        })
+        return jsonify({'prediction': prediction[0]})
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': str(e)})
 
 @app.route('/api/earthquakes')
 def get_earthquakes():
@@ -55,8 +36,13 @@ def get_earthquakes():
             coords = feature['geometry']['coordinates']
             longitude, latitude, depth = coords
 
-            # تجهيز مدخلات النموذج
-            features = pd.DataFrame([{'latitude': latitude, 'longitude': longitude, 'depth': depth}])
+            # Prepare model input
+            features = pd.DataFrame([{
+                'latitude': latitude,
+                'longitude': longitude,
+                'depth': depth
+            }])
+
             prediction = model.predict(features)[0]
 
             earthquake = {
