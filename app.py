@@ -3,11 +3,15 @@ import joblib
 import pandas as pd
 import requests
 import os
+from geopy.geocoders import Nominatim
 
 app = Flask(__name__)
 
-# Load the trained model
+# تحميل النموذج المدرب
 model = joblib.load("earthquake_model.pkl")
+
+# تهيئة Geopy
+geolocator = Nominatim(user_agent="earthquake_prediction_app")
 
 @app.route('/')
 def home():
@@ -17,11 +21,26 @@ def home():
 def predict():
     try:
         data = request.get_json()
-        features = pd.DataFrame([data])
+        location_name = data.get('location')
+        if not location_name:
+            return jsonify({'error': 'Location name is required'}), 400
+
+        # تحويل اسم المنطقة إلى إحداثيات (latitude, longitude)
+        location = geolocator.geocode(location_name)
+        if not location:
+            return jsonify({'error': 'Could not find coordinates for the given location'}), 404
+
+        # إدخال النموذج (مع عمق افتراضي)
+        features = pd.DataFrame([{'latitude': location.latitude, 'longitude': location.longitude, 'depth': 10}])
         prediction = model.predict(features)
-        return jsonify({'prediction': prediction[0]})
+        
+        return jsonify({
+            'location_name': location_name,
+            'prediction': int(prediction[0]),
+            'coordinates': [location.longitude, location.latitude]
+        })
     except Exception as e:
-        return jsonify({'error': str(e)})
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/earthquakes')
 def get_earthquakes():
@@ -36,13 +55,8 @@ def get_earthquakes():
             coords = feature['geometry']['coordinates']
             longitude, latitude, depth = coords
 
-            # Prepare model input
-            features = pd.DataFrame([{
-                'latitude': latitude,
-                'longitude': longitude,
-                'depth': depth
-            }])
-
+            # تجهيز مدخلات النموذج
+            features = pd.DataFrame([{'latitude': latitude, 'longitude': longitude, 'depth': depth}])
             prediction = model.predict(features)[0]
 
             earthquake = {
