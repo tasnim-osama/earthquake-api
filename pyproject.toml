@@ -3,6 +3,7 @@ name = "earthquake-api"
 version = "0.1.0"
 description = "Earthquake prediction API using Flask and ML"
 authors = ["Tasneem Osama <you@example.com>"]
+package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.10"
