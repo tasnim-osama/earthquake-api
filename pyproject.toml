@@ -14,6 +14,7 @@ joblib = "*"
 requests = "*"
 gunicorn = "*"
 geopy = "*"
+waitress = "^3.0.2"
 
 [build-system]
 requires = ["poetry-core"]
