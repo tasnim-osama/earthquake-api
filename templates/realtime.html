@@ -9,66 +9,91 @@
             background: linear-gradient(to right, #1e3c72, #2a5298);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             color: white;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 50px;
+            padding: 40px;
         }
 
-        h1 {
-            margin-bottom: 20px;
-            font-size: 2.5rem;
+        h1, h2 {
+            text-align: center;
         }
 
-        #prediction-form {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            width: 100%;
-            max-width: 400px;
+        #prediction-form, #live-section {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
         }
 
         input[type="text"] {
+            width: 100%;
             padding: 10px;
-            font-size: 1rem;
             border-radius: 5px;
             border: none;
+            font-size: 1rem;
+            margin-bottom: 10px;
         }
 
         button {
             padding: 10px;
-            font-size: 1rem;
-            border: none;
+            width: 100%;
             background-color: #00c6ff;
+            border: none;
             color: white;
+            font-size: 1rem;
             border-radius: 5px;
             cursor: pointer;
-            transition: background-color 0.3s ease;
         }
 
         button:hover {
             background-color: #0072ff;
         }
 
-        #result {
+        #result, #earthquake-table {
             margin-top: 20px;
-            font-size: 1.2rem;
+            font-size: 1rem;
             text-align: center;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th, td {
+            padding: 8px;
+            border: 1px solid #ddd;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        th {
+            background-color: rgba(0, 0, 0, 0.3);
         }
     </style>
 </head>
 <body>
     <h1>Real-time Earthquake Prediction</h1>
-    <form id="prediction-form">
-        <input type="text" id="location-input" placeholder="Enter a location (e.g. Istanbul)" required>
-        <button type="submit">Predict</button>
-    </form>
-    <div id="result"></div>
+
+    <div id="prediction-form">
+        <h2>Predict by Location</h2>
+        <form id="predict-form">
+            <input type="text" id="location-input" placeholder="Enter a location (e.g. Istanbul)" required>
+            <button type="submit">Predict</button>
+        </form>
+        <div id="result"></div>
+    </div>
+
+    <div id="live-section">
+        <h2>Recent Earthquakes (Live Data)</h2>
+        <button onclick="fetchEarthquakes()">Load Earthquakes</button>
+        <div id="earthquake-table"></div>
+    </div>
 
     <script>
-        document.getElementById('prediction-form').addEventListener('submit', async function(event) {
+        document.getElementById('predict-form').addEventListener('submit', async function (event) {
             event.preventDefault();
-
             const location = document.getElementById('location-input').value;
             const resultDiv = document.getElementById('result');
             resultDiv.innerText = 'Loading...';
@@ -76,9 +101,7 @@
             try {
                 const response = await fetch('/predict', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ location }),
                 });
 
@@ -99,6 +122,48 @@
                 resultDiv.innerText = 'An error occurred: ' + error.message;
             }
         });
+
+        async function fetchEarthquakes() {
+            const tableDiv = document.getElementById('earthquake-table');
+            tableDiv.innerHTML = 'Loading...';
+
+            try {
+                const response = await fetch('/api/earthquakes');
+                const data = await response.json();
+
+                if (data.error) {
+                    tableDiv.innerText = 'Error: ' + data.error;
+                    return;
+                }
+
+                let table = `<table>
+                    <thead>
+                        <tr>
+                            <th>Place</th>
+                            <th>Magnitude</th>
+                            <th>Prediction</th>
+                            <th>Coordinates</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+
+                data.forEach(eq => {
+                    const prediction = eq.prediction === 1 ? '⚠️ Strong' : '✅ Weak';
+                    table += `
+                        <tr>
+                            <td>${eq.place}</td>
+                            <td>${eq.magnitude}</td>
+                            <td>${prediction}</td>
+                            <td>${eq.coordinates[1].toFixed(2)}, ${eq.coordinates[0].toFixed(2)}</td>
+                        </tr>`;
+                });
+
+                table += `</tbody></table>`;
+                tableDiv.innerHTML = table;
+            } catch (error) {
+                tableDiv.innerText = 'An error occurred: ' + error.message;
+            }
+        }
     </script>
 </body>
 </html>
